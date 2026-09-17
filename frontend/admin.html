@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard — SPMS</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="logo">🅿️ SPMS</a>
+  <div class="nav-links">
+    <span style="opacity:0.85;font-size:0.9rem;">⚙️ Admin Panel</span>
+    <a href="login.html" style="color:rgba(255,255,255,0.7);">Logout</a>
+  </div>
+</nav>
+
+<div class="dashboard-layout">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="user-info">
+      <p>Admin</p>
+      <h4>Administrator</h4>
+    </div>
+    <a href="#" onclick="showSection('overview')" id="link-overview" class="active">📊 Overview</a>
+    <a href="#" onclick="showSection('slots')" id="link-slots">🅿️ Manage Slots</a>
+    <a href="#" onclick="showSection('bookings')" id="link-bookings">📋 All Bookings</a>
+    <a href="#" onclick="showSection('pricing')" id="link-pricing">💰 Pricing</a>
+    <a href="index.html">🏠 Home</a>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main-content">
+
+    <!-- ── OVERVIEW ── -->
+    <div id="section-overview">
+      <div class="page-title">Admin Overview</div>
+      <div class="stat-cards">
+        <div class="stat-card"><div class="num" id="stat-total">45</div><div class="lbl">Total Slots</div></div>
+        <div class="stat-card"><div class="num" style="color:#34a853;" id="stat-avail">22</div><div class="lbl">Available</div></div>
+        <div class="stat-card"><div class="num" style="color:#ea4335;" id="stat-occ">17</div><div class="lbl">Occupied</div></div>
+        <div class="stat-card"><div class="num" style="color:#fbbc04;" id="stat-res">6</div><div class="lbl">Reserved</div></div>
+        <div class="stat-card"><div class="num" style="color:#1a73e8;" id="stat-rev">₹3,240</div><div class="lbl">Revenue Today</div></div>
+      </div>
+
+      <!-- Simple bar chart -->
+      <div class="card" style="margin-bottom:20px;">
+        <div class="section-title">Occupancy by Floor</div>
+        <div id="chart" style="display:flex;align-items:flex-end;gap:20px;height:140px;padding:10px 0;">
+          <!-- Rendered by JS -->
+        </div>
+        <div style="display:flex;gap:20px;font-size:0.8rem;color:#888;margin-top:6px;">
+          <span>Floor 1</span><span>Floor 2</span><span>Floor 3</span>
+        </div>
+      </div>
+
+      <!-- Recent activity -->
+      <div class="card">
+        <div class="section-title">Recent Bookings</div>
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>Booking ID</th><th>Slot</th><th>Driver</th><th>Date</th><th>Amount</th><th>Status</th></tr></thead>
+            <tbody id="recent-bookings"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── MANAGE SLOTS ── -->
+    <div id="section-slots" style="display:none;">
+      <div class="page-title">Manage Parking Slots</div>
+
+      <!-- Add slot form -->
+      <div class="card" style="margin-bottom:20px;">
+        <div class="section-title">Add New Slot</div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
+          <div class="form-group" style="margin:0;">
+            <label>Slot Number</label>
+            <input type="text" id="new-slot-num" placeholder="e.g. 4-01" style="width:120px;">
+          </div>
+          <div class="form-group" style="margin:0;">
+            <label>Floor</label>
+            <select id="new-slot-floor" style="width:100px;">
+              <option>1</option><option>2</option><option>3</option><option>4</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin:0;">
+            <label>Type</label>
+            <select id="new-slot-type" style="width:130px;">
+              <option value="regular">Regular</option>
+              <option value="ev">EV Charging</option>
+              <option value="disabled">Disabled</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin:0;">
+            <label>Rate (₹/hr)</label>
+            <input type="number" id="new-slot-rate" value="30" style="width:100px;">
+          </div>
+          <button class="btn btn-success" onclick="addSlot()">+ Add Slot</button>
+        </div>
+        <div id="slot-alert" style="margin-top:12px;"></div>
+      </div>
+
+      <div class="card">
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr><th>Slot</th><th>Floor</th><th>Type</th><th>Rate</th><th>Status</th><th>Action</th></tr>
+            </thead>
+            <tbody id="slots-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── ALL BOOKINGS ── -->
+    <div id="section-bookings" style="display:none;">
+      <div class="page-title">All Bookings</div>
+      <div class="card">
+        <div class="table-wrapper">
+          <table>
+            <thead><tr><th>Booking ID</th><th>Slot</th><th>Floor</th><th>Date</th><th>Hours</th><th>Amount</th><th>Status</th></tr></thead>
+            <tbody id="all-bookings-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── PRICING ── -->
+    <div id="section-pricing" style="display:none;">
+      <div class="page-title">Pricing Rules</div>
+      <div class="card" style="max-width:500px;">
+        <div class="section-title">Current Rates</div>
+        <div class="info-row"><span>🚗 Regular Slot</span><span id="rate-regular">₹30 / hr</span></div>
+        <div class="info-row"><span>⚡ EV Charging Slot</span><span id="rate-ev">₹50 / hr</span></div>
+        <div class="info-row"><span>♿ Disabled Slot</span><span id="rate-disabled">₹20 / hr</span></div>
+
+        <div class="section-title" style="margin-top:24px;">Update Rates</div>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <label style="width:140px;font-size:0.88rem;">Regular (₹/hr)</label>
+            <input type="number" id="inp-regular" value="30" style="width:100px;padding:8px;border:1px solid #ddd;border-radius:6px;">
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;">
+            <label style="width:140px;font-size:0.88rem;">EV (₹/hr)</label>
+            <input type="number" id="inp-ev" value="50" style="width:100px;padding:8px;border:1px solid #ddd;border-radius:6px;">
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;">
+            <label style="width:140px;font-size:0.88rem;">Disabled (₹/hr)</label>
+            <input type="number" id="inp-disabled" value="20" style="width:100px;padding:8px;border:1px solid #ddd;border-radius:6px;">
+          </div>
+          <button class="btn btn-primary" style="align-self:flex-start;" onclick="updateRates()">Save Rates</button>
+          <div id="rate-alert"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ── Demo slots data ──
+let adminSlots = [];
+function initAdminSlots() {
+  const types = ['regular','regular','ev','disabled'];
+  const rates  = { regular:30, ev:50, disabled:20 };
+  let id = 1;
+  for (let floor = 1; floor <= 3; floor++) {
+    for (let i = 1; i <= 15; i++) {
+      const type   = types[Math.floor(Math.random() * types.length)];
+      const status = Math.random() < 0.5 ? 'available' : (Math.random() < 0.4 ? 'occupied' : 'reserved');
+      adminSlots.push({ id: id++, number:`${floor}-${String(i).padStart(2,'0')}`, floor, type, rate:rates[type], status });
+    }
+  }
+}
+
+const demoBookings = [
+  { id:'BK001', slot:'1-03', floor:1, driver:'Rahul S.', date:'17/09/2024', hours:2, amount:60, status:'Confirmed' },
+  { id:'BK002', slot:'2-07', floor:2, driver:'Priya M.', date:'17/09/2024', hours:1, amount:30, status:'Confirmed' },
+  { id:'BK003', slot:'1-11', floor:1, driver:'Arjun K.', date:'16/09/2024', hours:3, amount:90, status:'Cancelled' },
+  { id:'BK004', slot:'3-02', floor:3, driver:'Sneha P.', date:'16/09/2024', hours:2, amount:100, status:'Confirmed' },
+  { id:'BK005', slot:'2-14', floor:2, driver:'Vikram D.', date:'15/09/2024', hours:4, amount:120, status:'Confirmed' },
+];
+
+window.onload = () => {
+  initAdminSlots();
+  renderChart();
+  renderRecentBookings();
+  renderSlotsTable();
+  renderAllBookings();
+};
+
+// ── Section Nav ──
+function showSection(name) {
+  ['overview','slots','bookings','pricing'].forEach(s => {
+    document.getElementById(`section-${s}`).style.display = s === name ? 'block' : 'none';
+    const link = document.getElementById(`link-${s}`);
+    if (link) link.classList.toggle('active', s === name);
+  });
+}
+
+// ── Chart ──
+function renderChart() {
+  const floors = [1,2,3];
+  const chart  = document.getElementById('chart');
+  chart.innerHTML = '';
+  floors.forEach(f => {
+    const floorSlots = adminSlots.filter(s => s.floor === f);
+    const occ = floorSlots.filter(s => s.status !== 'available').length;
+    const pct  = Math.round((occ / floorSlots.length) * 100);
+    const bar  = document.createElement('div');
+    bar.style.cssText = `
+      flex:1; background: linear-gradient(to top, #1a73e8, #4a9ffa);
+      border-radius:6px 6px 0 0; height:${pct}%;
+      display:flex; align-items:center; justify-content:center;
+      color:white; font-weight:700; font-size:0.85rem; min-height:28px;
+      position:relative;
+    `;
+    bar.textContent = `${pct}%`;
+    chart.appendChild(bar);
+  });
+}
+
+// ── Recent Bookings ──
+function renderRecentBookings() {
+  const tbody = document.getElementById('recent-bookings');
+  const allB = [...demoBookings, ...JSON.parse(localStorage.getItem('spms_bookings')||'[]')].slice(0,8);
+  tbody.innerHTML = allB.map(b => `
+    <tr>
+      <td><strong>${b.id}</strong></td>
+      <td>${b.slot}</td>
+      <td>${b.driver || 'Demo Driver'}</td>
+      <td>${b.date}</td>
+      <td>₹${b.amount}</td>
+      <td><span class="badge ${b.status==='Confirmed'?'badge-green':'badge-red'}">${b.status}</span></td>
+    </tr>
+  `).join('');
+}
+
+// ── Slots Table ──
+function renderSlotsTable() {
+  const tbody = document.getElementById('slots-body');
+  tbody.innerHTML = adminSlots.map(s => `
+    <tr>
+      <td><strong>${s.number}</strong></td>
+      <td>Floor ${s.floor}</td>
+      <td>${s.type === 'ev' ? '⚡ EV' : s.type === 'disabled' ? '♿ Disabled' : '🚗 Regular'}</td>
+      <td>₹${s.rate}/hr</td>
+      <td>
+        <select onchange="updateSlotStatus(${s.id}, this.value)" style="padding:4px 8px;border:1px solid #ddd;border-radius:4px;font-size:0.82rem;">
+          <option ${s.status==='available'?'selected':''} value="available">Available</option>
+          <option ${s.status==='occupied'?'selected':''} value="occupied">Occupied</option>
+          <option ${s.status==='reserved'?'selected':''} value="reserved">Reserved</option>
+        </select>
+      </td>
+      <td><button class="btn btn-danger btn-sm" onclick="deleteSlot(${s.id})">Delete</button></td>
+    </tr>
+  `).join('');
+}
+
+function addSlot() {
+  const num   = document.getElementById('new-slot-num').value.trim();
+  const floor = parseInt(document.getElementById('new-slot-floor').value);
+  const type  = document.getElementById('new-slot-type').value;
+  const rate  = parseInt(document.getElementById('new-slot-rate').value);
+  if (!num) { showAlert('slot-alert', 'Enter slot number.', 'error'); return; }
+  adminSlots.push({ id: Date.now(), number: num, floor, type, rate, status: 'available' });
+  renderSlotsTable();
+  showAlert('slot-alert', `Slot ${num} added!`, 'success');
+  document.getElementById('new-slot-num').value = '';
+}
+
+function deleteSlot(id) {
+  adminSlots = adminSlots.filter(s => s.id !== id);
+  renderSlotsTable();
+}
+
+function updateSlotStatus(id, status) {
+  const s = adminSlots.find(s => s.id === id);
+  if (s) s.status = status;
+  renderChart();
+}
+
+// ── All Bookings ──
+function renderAllBookings() {
+  const tbody = document.getElementById('all-bookings-body');
+  const allB  = [...demoBookings, ...JSON.parse(localStorage.getItem('spms_bookings')||'[]')];
+  tbody.innerHTML = allB.map(b => `
+    <tr>
+      <td><strong>${b.id}</strong></td>
+      <td>${b.slot}</td>
+      <td>Floor ${b.floor}</td>
+      <td>${b.date}</td>
+      <td>${b.hours} hr</td>
+      <td>₹${b.amount}</td>
+      <td><span class="badge ${b.status==='Confirmed'?'badge-green':'badge-red'}">${b.status}</span></td>
+    </tr>
+  `).join('');
+}
+
+// ── Pricing ──
+function updateRates() {
+  const r  = document.getElementById('inp-regular').value;
+  const ev = document.getElementById('inp-ev').value;
+  const d  = document.getElementById('inp-disabled').value;
+  document.getElementById('rate-regular').textContent  = `₹${r} / hr`;
+  document.getElementById('rate-ev').textContent       = `₹${ev} / hr`;
+  document.getElementById('rate-disabled').textContent = `₹${d} / hr`;
+  showAlert('rate-alert', 'Rates updated successfully!', 'success');
+}
+
+function showAlert(id, msg, type) {
+  document.getElementById(id).innerHTML = `<div class="alert alert-${type}" style="margin:0;">${msg}</div>`;
+  setTimeout(() => { const el = document.getElementById(id); if(el) el.innerHTML = ''; }, 3000);
+}
+</script>
+
+</body>
+</html>

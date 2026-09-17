@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Driver Dashboard — SPMS</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="logo">🅿️ SPMS</a>
+  <div class="nav-links">
+    <span id="nav-user" style="opacity:0.85;font-size:0.9rem;"></span>
+    <a href="#" onclick="logout()" style="color:rgba(255,255,255,0.7);">Logout</a>
+  </div>
+</nav>
+
+<div class="dashboard-layout">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="user-info">
+      <p>Logged in as</p>
+      <h4 id="sidebar-name">Driver</h4>
+    </div>
+    <a href="#" onclick="showSection('find')" id="link-find" class="active">🔍 Find Parking</a>
+    <a href="#" onclick="showSection('bookings')" id="link-bookings">📋 My Bookings</a>
+    <a href="#" onclick="showSection('profile')" id="link-profile">👤 Profile</a>
+    <a href="index.html" style="margin-top:auto;">🏠 Home</a>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main-content">
+
+    <!-- ── FIND PARKING ── -->
+    <div id="section-find">
+      <div class="page-title">Find Parking Slot</div>
+
+      <div class="search-bar">
+        <select id="filter-floor">
+          <option value="all">All Floors</option>
+          <option value="1">Floor 1</option>
+          <option value="2">Floor 2</option>
+          <option value="3">Floor 3</option>
+        </select>
+        <select id="filter-type">
+          <option value="all">All Types</option>
+          <option value="regular">Regular</option>
+          <option value="ev">EV Charging</option>
+          <option value="disabled">Disabled</option>
+        </select>
+        <button class="btn btn-primary" onclick="applyFilter()">Filter</button>
+      </div>
+
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot available"></div> Available</div>
+        <div class="legend-item"><div class="legend-dot occupied"></div> Occupied</div>
+        <div class="legend-item"><div class="legend-dot reserved"></div> Reserved</div>
+        <div class="legend-item"><div class="legend-dot selected"></div> Selected</div>
+      </div>
+
+      <div class="card">
+        <div class="section-title">Parking Lot — Floor <span id="floor-label">All</span></div>
+        <div class="parking-grid" id="parking-grid"></div>
+      </div>
+
+      <!-- Booking Panel (shown on slot select) -->
+      <div class="booking-panel" id="booking-panel" style="display:none;">
+        <h3>📌 Book Slot</h3>
+        <div class="info-row"><span>Slot Number</span><span id="bp-slot">—</span></div>
+        <div class="info-row"><span>Floor</span><span id="bp-floor">—</span></div>
+        <div class="info-row"><span>Type</span><span id="bp-type">—</span></div>
+        <div class="info-row"><span>Rate</span><span id="bp-rate">—</span></div>
+        <div class="form-group" style="margin-top:14px;">
+          <label>Duration (hours)</label>
+          <input type="number" id="bp-hours" value="1" min="1" max="12" style="width:100px;"
+                 oninput="calcTotal()">
+        </div>
+        <div class="info-row"><span>Total Fee</span><span id="bp-total" style="color:#1a73e8;font-size:1.1rem;">₹0</span></div>
+        <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn btn-success" onclick="confirmBooking()">✅ Confirm Booking</button>
+          <button class="btn btn-danger btn-sm" onclick="cancelSelection()">Cancel</button>
+        </div>
+      </div>
+
+      <div id="booking-alert"></div>
+    </div>
+
+    <!-- ── MY BOOKINGS ── -->
+    <div id="section-bookings" style="display:none;">
+      <div class="page-title">My Bookings</div>
+      <div class="card">
+        <div class="table-wrapper">
+          <table id="bookings-table">
+            <thead>
+              <tr>
+                <th>Booking ID</th>
+                <th>Slot</th>
+                <th>Floor</th>
+                <th>Date</th>
+                <th>Duration</th>
+                <th>Amount</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="bookings-body">
+              <tr><td colspan="8" style="text-align:center;color:#888;padding:30px;">No bookings yet.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── PROFILE ── -->
+    <div id="section-profile" style="display:none;">
+      <div class="page-title">My Profile</div>
+      <div class="card" style="max-width:450px;">
+        <div id="profile-info"></div>
+        <button class="btn btn-danger btn-sm" style="margin-top:20px;" onclick="logout()">Logout</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- RECEIPT MODAL -->
+<div class="modal-overlay" id="receipt-modal">
+  <div class="modal">
+    <h3>🎉 Booking Confirmed!</h3>
+    <div id="receipt-content"></div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="closeReceipt()">Done</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Data ──
+const slots = [];
+function initSlots() {
+  const types = ['regular','regular','regular','ev','disabled'];
+  const rates = { regular: 30, ev: 50, disabled: 20 };
+  let id = 1;
+  for (let floor = 1; floor <= 3; floor++) {
+    for (let i = 1; i <= 15; i++) {
+      const type = types[Math.floor(Math.random() * types.length)];
+      const status = Math.random() < 0.5 ? 'available' : (Math.random() < 0.5 ? 'occupied' : 'reserved');
+      slots.push({ id: id++, number: `${floor}-${String(i).padStart(2,'0')}`, floor, type, status, rate: rates[type] });
+    }
+  }
+}
+
+let bookings = JSON.parse(localStorage.getItem('spms_bookings') || '[]');
+let selectedSlot = null;
+
+// ── Init ──
+window.onload = () => {
+  const user = JSON.parse(localStorage.getItem('spms_user') || 'null');
+  if (!user) { window.location.href = 'login.html'; return; }
+  document.getElementById('nav-user').textContent = `Hi, ${user.name}`;
+  document.getElementById('sidebar-name').textContent = user.name;
+  showProfile(user);
+  initSlots();
+  renderGrid(slots);
+  renderBookings();
+};
+
+// ── Section Nav ──
+function showSection(name) {
+  ['find','bookings','profile'].forEach(s => {
+    document.getElementById(`section-${s}`).style.display = s === name ? 'block' : 'none';
+    const link = document.getElementById(`link-${s}`);
+    if (link) link.classList.toggle('active', s === name);
+  });
+  if (name === 'bookings') renderBookings();
+}
+
+// ── Grid Render ──
+function renderGrid(slotList) {
+  const grid = document.getElementById('parking-grid');
+  grid.innerHTML = '';
+  slotList.forEach(slot => {
+    const div = document.createElement('div');
+    div.className = `slot ${slot.status}`;
+    div.id = `slot-${slot.id}`;
+    const icon = slot.type === 'ev' ? '⚡' : slot.type === 'disabled' ? '♿' : '🚗';
+    div.innerHTML = `<span class="slot-icon">${icon}</span><span>${slot.number}</span>`;
+    if (slot.status !== 'occupied') div.onclick = () => selectSlot(slot);
+    grid.appendChild(div);
+  });
+}
+
+function applyFilter() {
+  const floor = document.getElementById('filter-floor').value;
+  const type  = document.getElementById('filter-type').value;
+  const label = floor === 'all' ? 'All' : floor;
+  document.getElementById('floor-label').textContent = label;
+  const filtered = slots.filter(s =>
+    (floor === 'all' || s.floor == floor) &&
+    (type  === 'all' || s.type === type)
+  );
+  renderGrid(filtered);
+  cancelSelection();
+}
+
+// ── Slot Selection ──
+function selectSlot(slot) {
+  if (selectedSlot) {
+    const prev = document.getElementById(`slot-${selectedSlot.id}`);
+    if (prev) prev.className = `slot ${selectedSlot.status}`;
+  }
+  selectedSlot = slot;
+  const el = document.getElementById(`slot-${slot.id}`);
+  if (el) el.className = 'slot selected';
+
+  document.getElementById('bp-slot').textContent  = slot.number;
+  document.getElementById('bp-floor').textContent  = `Floor ${slot.floor}`;
+  document.getElementById('bp-type').textContent   = slot.type.charAt(0).toUpperCase() + slot.type.slice(1);
+  document.getElementById('bp-rate').textContent   = `₹${slot.rate}/hr`;
+  document.getElementById('booking-panel').style.display = 'block';
+  calcTotal();
+}
+
+function calcTotal() {
+  const h = parseInt(document.getElementById('bp-hours').value) || 1;
+  if (selectedSlot) document.getElementById('bp-total').textContent = `₹${selectedSlot.rate * h}`;
+}
+
+function cancelSelection() {
+  if (selectedSlot) {
+    const el = document.getElementById(`slot-${selectedSlot.id}`);
+    if (el) el.className = `slot ${selectedSlot.status}`;
+    selectedSlot = null;
+  }
+  document.getElementById('booking-panel').style.display = 'none';
+  document.getElementById('booking-alert').innerHTML = '';
+}
+
+// ── Booking ──
+function confirmBooking() {
+  if (!selectedSlot) return;
+  const hours = parseInt(document.getElementById('bp-hours').value) || 1;
+  const total = selectedSlot.rate * hours;
+  const now   = new Date();
+  const user  = JSON.parse(localStorage.getItem('spms_user'));
+
+  const booking = {
+    id: 'BK' + Date.now(),
+    slot: selectedSlot.number,
+    floor: selectedSlot.floor,
+    type: selectedSlot.type,
+    date: now.toLocaleDateString('en-IN'),
+    time: now.toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit'}),
+    hours,
+    amount: total,
+    status: 'Confirmed'
+  };
+
+  bookings.unshift(booking);
+  localStorage.setItem('spms_bookings', JSON.stringify(bookings));
+
+  // Mark slot reserved
+  selectedSlot.status = 'reserved';
+  const el = document.getElementById(`slot-${selectedSlot.id}`);
+  if (el) el.className = 'slot reserved';
+
+  showReceipt(booking, user);
+  selectedSlot = null;
+  document.getElementById('booking-panel').style.display = 'none';
+}
+
+function showReceipt(b, user) {
+  document.getElementById('receipt-content').innerHTML = `
+    <div class="info-row"><span>Booking ID</span><span><strong>${b.id}</strong></span></div>
+    <div class="info-row"><span>Driver</span><span>${user?.name || '—'}</span></div>
+    <div class="info-row"><span>Slot</span><span>${b.slot} (Floor ${b.floor})</span></div>
+    <div class="info-row"><span>Date & Time</span><span>${b.date}, ${b.time}</span></div>
+    <div class="info-row"><span>Duration</span><span>${b.hours} hour(s)</span></div>
+    <div class="info-row"><span>Amount Paid</span><span style="color:#34a853;font-weight:700;">₹${b.amount}</span></div>
+    <div class="info-row"><span>Status</span><span><span class="badge badge-green">${b.status}</span></span></div>
+    <div class="alert alert-info" style="margin-top:14px;">🎫 Show this booking ID at entry gate.</div>
+  `;
+  document.getElementById('receipt-modal').classList.add('open');
+}
+
+function closeReceipt() {
+  document.getElementById('receipt-modal').classList.remove('open');
+}
+
+// ── Bookings Table ──
+function renderBookings() {
+  bookings = JSON.parse(localStorage.getItem('spms_bookings') || '[]');
+  const tbody = document.getElementById('bookings-body');
+  if (!bookings.length) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#888;padding:30px;">No bookings yet.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = bookings.map(b => `
+    <tr>
+      <td><strong>${b.id}</strong></td>
+      <td>${b.slot}</td>
+      <td>Floor ${b.floor}</td>
+      <td>${b.date} ${b.time}</td>
+      <td>${b.hours} hr</td>
+      <td>₹${b.amount}</td>
+      <td><span class="badge ${b.status === 'Confirmed' ? 'badge-green' : 'badge-red'}">${b.status}</span></td>
+      <td>${b.status === 'Confirmed' ? `<button class="btn btn-danger btn-sm" onclick="cancelBooking('${b.id}')">Cancel</button>` : '—'}</td>
+    </tr>
+  `).join('');
+}
+
+function cancelBooking(id) {
+  const idx = bookings.findIndex(b => b.id === id);
+  if (idx !== -1) { bookings[idx].status = 'Cancelled'; }
+  localStorage.setItem('spms_bookings', JSON.stringify(bookings));
+  renderBookings();
+}
+
+// ── Profile ──
+function showProfile(user) {
+  document.getElementById('profile-info').innerHTML = `
+    <div class="info-row"><span>Name</span><span>${user.name}</span></div>
+    <div class="info-row"><span>Email</span><span>${user.email}</span></div>
+    <div class="info-row"><span>Role</span><span><span class="badge badge-blue">${user.role}</span></span></div>
+    ${user.vehicle ? `<div class="info-row"><span>Vehicle</span><span>${user.vehicle}</span></div>` : ''}
+  `;
+}
+
+function logout() {
+  localStorage.removeItem('spms_user');
+  window.location.href = 'login.html';
+}
+</script>
+
+</body>
+</html>
