@@ -115,57 +115,43 @@ classDiagram
 sequenceDiagram
     autonumber
     actor Driver
-    participant UI as "Driver Web App"
-    participant API as "SPMS REST API"
-    participant RS as "Reservation Service"
-    participant DB as "Relational Database"
-    participant PA as "Payment Adapter"
-    participant PG as "Payment Gateway"
-    participant NS as "Notification Service"
+    participant UI as Driver Web App
+    participant API as SPMS REST API
+    participant RS as Reservation Service
+    participant DB as Relational Database
+    participant Pay as Payment Gateway
+    participant Notify as Notification Service
 
-    Driver->>UI: Enter facility and time criteria
-    UI->>API: Request available slots
-    API->>RS: Find available slots(criteria)
-    RS->>DB: Read slots and overlapping reservations
-    DB-->>RS: Candidate slots
-    RS-->>API: Availability and prices
-    API-->>UI: Display available slots
-
-    Driver->>UI: Select slot and confirm reservation
-    UI->>API: Submit reservation request
-    API->>RS: Reserve slot(user, slot, interval)
-    RS->>DB: Begin transaction and recheck availability
+    Driver->>UI: Search facility, dates, slot type
+    UI->>API: GET availability criteria
+    API->>RS: findAvailableSlots(criteria)
+    RS->>DB: Query facilities, slots, reservations
+    DB-->>RS: Available slot candidates
+    RS-->>API: Availability results
+    API-->>UI: Slot list and pricing
+    Driver->>UI: Select slot and confirm
+    UI->>API: POST reservation request
+    API->>RS: reserve(user, slot, interval)
+    RS->>DB: Begin transaction; lock/check slot
     DB-->>RS: Slot available
-    RS->>DB: Create temporary hold
-    RS->>DB: Commit hold transaction
-
-    RS->>PA: Create payment request(idempotency key)
-    PA->>PG: Request payment
-    PG-->>PA: Payment result and provider reference
-    PA-->>RS: Normalized payment result
-
+    RS->>DB: Create pending reservation
+    RS->>Pay: Create payment request
+    Pay-->>RS: Payment result / provider reference
     alt Payment succeeds
-        RS->>DB: Begin transaction
-        RS->>DB: Confirm reservation and save payment
+        RS->>DB: Mark reservation confirmed; save payment
         RS->>DB: Commit transaction
-        RS->>NS: Send booking confirmation
-        NS-->>Driver: Booking confirmation and receipt
+        RS->>Notify: Send confirmation
+        Notify-->>Driver: Booking confirmation
         RS-->>API: Confirmed reservation
-        API-->>UI: Show confirmation
+        API-->>UI: Confirmation and receipt
     else Payment fails or is cancelled
-        RS->>DB: Mark payment failed and release hold
+        RS->>DB: Mark reservation payment-failed / release hold
+        RS->>DB: Commit failure state
         RS-->>API: Payment failure result
         API-->>UI: Show retry or cancellation options
-    else Payment result is delayed
-        RS->>DB: Keep reservation in pending-payment state
-        RS-->>API: Return pending status
-        API-->>UI: Show payment pending
-        PG-->>PA: Send payment status webhook
-        PA->>RS: Verify and process webhook idempotently
-        RS->>DB: Confirm reservation or release hold
-        RS->>NS: Notify driver of final status
     end
 ```
+
 ## 3. Activity Diagram - Parking entry, stay, and exit
 
 ```mermaid
@@ -199,4 +185,3 @@ flowchart TD
 ## 4. Diagram scope
 
 The class model describes the main domain entities and associations. The sequence diagram details the reservation/payment interaction. The activity diagram models entry through exit, including exception branches for invalid events, unavailable slots, and failed payments.
-
