@@ -180,6 +180,15 @@ Smart-Parking-Management-System/
 
 ---
 
+## Software Engineering Design Deliverables
+
+- [Session 9: Architecture Design](docs/Architecture.md)
+- [System Architecture Diagram](docs/system-architecture.svg)
+- [UML Class, Sequence, and Activity Diagrams](docs/UML-Design.md)
+- [Session 10: Software Metrics Report](docs/Metrics-Report.md)
+- [Design Analysis Report](docs/Design-Analysis-Report.md)
+- [Design Analysis Report PDF](docs/Design-Analysis-Report.pdf)
+- [Viva Questions and Answers](docs/Viva-Questions-and-Answers.md)
 ## Documentation
 
 Direct links to the formal project deliverables:
@@ -208,3 +217,5 @@ Direct links to the formal project deliverables:
 - **License Plate Recognition (ANPR) Integration**: Direct integration with hardware cameras for automatic barrier gate control.
 - **EV Charging Slot Booking**: Specialized slot reservation for electric vehicle charging stations.
 - **Dynamic Demand Pricing**: AI-based dynamic pricing algorithm based on peak hours and historical occupancy rates.
+
+
